@@ -21,6 +21,8 @@ def load_keywords(path: str = "queries.json") -> Dict[str, set[str]]:
         KEYWORDS_CACHE = {
             "he": {s.lower() for s in config.get("keywords_he", [])},
             "en": {s.lower() for s in config.get("keywords_en", [])},
+            "artists": {s.lower() for s in config.get("artist_keywords", [])},
+            "viral": {s.lower() for s in config.get("viral_cues", [])},
             "cities": {s.lower() for s in config.get("cities", [])},
         }
         LOGGER.debug("Loaded keyword configuration", extra={"counts": {k: len(v) for k, v in KEYWORDS_CACHE.items()}})
@@ -35,6 +37,8 @@ def score_rule_based(title: str, text: str) -> float:
     hits_he = sum(1 for kw in keywords["he"] if kw in combined)
     hits_en = sum(1 for kw in keywords["en"] if kw in combined)
     hits_city = sum(1 for city in keywords["cities"] if city in combined)
+    hits_artist = sum(1 for artist in keywords["artists"] if artist in combined)
+    hits_viral = sum(1 for clue in keywords["viral"] if clue in combined)
 
     if hits_he == 0 and hits_en == 0:
         score -= 3.0
@@ -42,7 +46,9 @@ def score_rule_based(title: str, text: str) -> float:
         score += hits_he * 2.0
         score += hits_en * 1.4
 
-    score += hits_city * 1.0
+    score += hits_city * 1.2
+    score += hits_artist * 2.5
+    score += hits_viral * 1.5
 
     if re.search(r"\b(today|tonight|this week|tomorrow|היום|הלילה|השבוע|מחר)\b", combined):
         score += 1.8
@@ -64,6 +70,8 @@ def score_rule_based(title: str, text: str) -> float:
             "hits_he": hits_he,
             "hits_en": hits_en,
             "hits_city": hits_city,
+            "hits_artist": hits_artist,
+            "hits_viral": hits_viral,
         },
     )
     return score

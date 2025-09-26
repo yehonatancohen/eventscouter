@@ -13,3 +13,10 @@ def test_score_rule_based_penalises_missing_keywords():
     text = "Today we discuss earnings and politics in Jerusalem."
     score = score_rule_based(title, text)
     assert score < 0
+
+
+def test_score_rule_based_recognises_viral_artist_mentions():
+    title = "אדם טן משחרר טראק חדש בקיסריה"
+    text = "הקליפ הויראלי של Adam Ten מתעד לילה מטורף ב-Club de Combat."
+    score = score_rule_based(title, text)
+    assert score > 4
