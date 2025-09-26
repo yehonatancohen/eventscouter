@@ -27,6 +27,7 @@ OLLAMA_ENDPOINT=http://localhost:11434
 ## Configuration
 Edit `queries.json`:
 - `google_news_queries`: search strings (the tool builds RSS URLs automatically).
+- `social_video_queries`: Google News RSS searches that focus on TikTok/Instagram/Facebook clips.
 - `rss_feeds`: direct feeds for event or production sites.
 - `subreddits`: EDM/festival sources.
 - `keywords_*` + `cities`: keywords for scoring.
@@ -35,10 +36,11 @@ Edit `queries.json`:
 ```bash
 python bot.py --limit 6 --min-score 4 --interval-minutes 0
 ```
-The bot sends one arranged Telegram digest: title, source, score, and when available direct video links (`.mp4/.webm`) and platform links (TikTok/IG/Facebook/Reels/Reddit).
+By default the bot loops forever, waking up every 15 minutes. Use `--interval-minutes` to change the cadence or `--once` to run a single cycle. The Telegram message now includes a curated digest plus a "Suggested social upload" block with a highlighted clip and two catchy headline ideas.
+The default minimum score is 5.5—raise or lower it via `--min-score` depending on how picky you want the feed to be.
 
 ## How it decides what is "good"
-- Rule-based score: matches for keywords, city mentions, date/time hints, ticket information, and text length.
+- Rule-based score: matches for keywords, city mentions, date/time hints, ticket information, and text length, plus boosts for viral video terms and celebrity party context.
 - Optional LLM score through Ollama. Final score is a 60/40 blend of rule-based and AI judging.
 - Events below the minimum score are dropped.
 
@@ -48,9 +50,9 @@ The bot sends one arranged Telegram digest: title, source, score, and when avail
 
 ## Run on a schedule (every 4 hours)
 ```cron
-0 */4 * * * cd /path/to/eventscout && . .venv/bin/activate && python bot.py --limit 6 --min-score 4 --interval-minutes 0
+0 */4 * * * cd /path/to/eventscout && . .venv/bin/activate && python bot.py --limit 6 --interval-minutes 240
 ```
-Use `--interval-minutes` to let the bot loop continuously without relying on cron.
+Because the bot already loops continuously, cron is optional—useful only if you prefer process supervision outside the script.
 
 ## Optional OpenRouter (free tier)
 Add to `.env`:

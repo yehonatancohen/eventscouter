@@ -47,6 +47,17 @@ def score_rule_based(title: str, text: str) -> float:
     if re.search(r"\b(today|tonight|this week|tomorrow|היום|הלילה|השבוע|מחר)\b", combined):
         score += 1.8
 
+    if re.search(r"\b(video|clip|footage|tiktok|instagram|reel|viral)\b", combined):
+        score += 1.4
+
+    if re.search(r"(וידאו|תיעוד|קליפ|מצחיק|ויראלי)", combined):
+        score += 1.2
+
+    if re.search(r"\b(celeb|celebrity|influencer)\b", combined) or re.search(
+        r"(סלב|כוכב|כוכבת)", combined
+    ):
+        score += 0.9
+
     if len(text) < 120:
         score -= 0.8
 

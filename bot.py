@@ -12,6 +12,7 @@ from typing import Dict, Iterable, List, Sequence
 import requests
 from dotenv import load_dotenv
 
+from core.rank import final_score, load_keywords
 from core.extract import extract_text_and_videos
 from core.rank import final_score
 from core.utils import hash_id, load_seen, norm_text, save_seen
@@ -69,6 +70,20 @@ def collect_candidates(qconf: Dict, *, max_per_source: int = 10) -> List[dict]:
         except Exception:
             LOGGER.exception("Failed to fetch Google News", extra={"query": query})
 
+    for query in qconf.get("social_video_queries", []):
+        try:
+            results = fetch_search(query, limit=max_per_source, language="iw")
+            LOGGER.debug(
+                "Social video query results",
+                extra={"query": query, "count": len(results)},
+            )
+            for result in results:
+                if result["link"] not in seen_links:
+                    items.append(result)
+                    seen_links.add(result["link"])
+        except Exception:
+            LOGGER.exception("Failed to fetch social video query", extra={"query": query})
+
     for url in qconf.get("rss_feeds", []):
         try:
             results = fetch_rss(url, limit=max_per_source)
@@ -103,6 +118,8 @@ def enrich_candidates(
     ollama_endpoint: str,
     ollama_model: str,
 ) -> List[Candidate]:
+    from core.extract import extract_text_and_videos
+
     enriched: List[Candidate] = []
     for item in raw_items:
         uid = hash_id(item["link"])
@@ -119,6 +136,8 @@ def enrich_candidates(
             final_score(title, text, use_llm, ollama_endpoint, ollama_model),
             2,
         )
+        if direct_videos or platform_links:
+            score = round(score + 1.2, 2)
         LOGGER.debug(
             "Candidate scored",
             extra={"link": item["link"], "score": score, "title": title[:80]},
@@ -168,6 +187,80 @@ def format_digest(candidates: Sequence[Candidate]) -> str:
     return "\n".join(lines).strip()
 
 
+def _detect_city(title: str) -> str | None:
+    lowered = title.lower()
+    for city in load_keywords()["cities"]:
+        if city in lowered:
+            return city.title()
+    return None
+
+
+def _generate_social_titles(candidate: Candidate, city: str | None) -> List[str]:
+    base = candidate.title
+    if len(base) > 90:
+        base = base[:87] + "..."
+    titles: List[str] = []
+    if city:
+        titles.append(f"{city} Nightlife Scoop: {base}")
+        titles.append(f"{city} Party Cam: {base}")
+    else:
+        titles.append(f"Festival FOMO Alert: {base}")
+        titles.append(f"Aftermovie Drop: {base}")
+    return titles
+
+
+def build_social_video_suggestion(candidates: Sequence[Candidate]) -> str:
+    if not candidates:
+        return ""
+
+    prioritized = sorted(
+        candidates,
+        key=lambda c: (
+            bool(c.videos or c.platform_links),
+            len(c.videos),
+            len(c.platform_links),
+            c.score,
+        ),
+        reverse=True,
+    )
+
+    for candidate in prioritized:
+        media_link = None
+        if candidate.videos:
+            media_link = candidate.videos[0]
+        elif candidate.platform_links:
+            media_link = candidate.platform_links[0]
+        if not media_link:
+            continue
+
+        city = _detect_city(candidate.title)
+        titles = _generate_social_titles(candidate, city)
+        lines = [
+            "🔥 Suggested social upload",
+            f"Inspiration: {candidate.title}",
+            f"Clip to feature: {media_link}",
+            "Catchy titles:",
+        ]
+        lines.extend(f"• {title}" for title in titles)
+        lines.append(f"Context source: {candidate.link}")
+        suggestion = "\n".join(lines)
+        LOGGER.info(
+            "Prepared social upload suggestion",
+            extra={"title": candidate.title[:80], "media_link": media_link},
+        )
+        return suggestion
+
+    return ""
+
+
+def compose_message(candidates: Sequence[Candidate]) -> str:
+    body = format_digest(candidates)
+    suggestion = build_social_video_suggestion(candidates)
+    if suggestion:
+        return f"{body}\n\n{suggestion}"
+    return body
+
+
 def run_cycle(
     *,
     token: str,
@@ -199,7 +292,7 @@ def run_cycle(
         LOGGER.info("No candidates exceeded threshold", extra={"min_score": min_score})
         return
 
-    message = format_digest(top_candidates)
+    message = compose_message(top_candidates)
     send_telegram(token, chat_id, message, preview=True)
 
 
@@ -212,19 +305,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run EventScout collector")
     parser.add_argument("--limit", type=int, default=6, help="Maximum number of events to send per cycle")
     parser.add_argument("--max-per-source", type=int, default=8, help="Maximum raw items per source")
-    parser.add_argument("--min-score", type=float, default=4.0, help="Minimum score required to send an event")
+    parser.add_argument("--min-score", type=float, default=5.5, help="Minimum score required to send an event")
     parser.add_argument(
         "--interval-minutes",
         type=int,
-        default=0,
-        help="If > 0, run continuously with this interval between cycles",
+        default=15,
+        help="Interval (in minutes) between cycles when running continuously",
     )
-    parser.add_argument(
-        "--max-cycles",
-        type=int,
-        default=0,
-        help="For testing: maximum number of cycles to run when interval is set",
-    )
+    parser.add_argument("--once", action="store_true", help="Run a single cycle and exit")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
     return parser.parse_args()
 
@@ -249,43 +337,29 @@ def main() -> None:
     use_llm = bool(ollama_model and ollama_endpoint)
     LOGGER.info("LLM scoring enabled: %s", use_llm)
 
-    run_cycle(
-        token=token,
-        chat_id=chat_id,
-        qconf=qconf,
-        seen_ids=seen_ids,
-        max_per_source=args.max_per_source,
-        limit=args.limit,
-        min_score=args.min_score,
-        use_llm=use_llm,
-        ollama_endpoint=ollama_endpoint,
-        ollama_model=ollama_model,
-    )
-
-    if args.interval_minutes > 0:
-        cycles_run = 1
-        while True:
-            if args.max_cycles and cycles_run >= args.max_cycles:
-                LOGGER.info("Reached max cycles", extra={"max_cycles": args.max_cycles})
-                break
-            LOGGER.info(
-                "Sleeping before next cycle",
-                extra={"minutes": args.interval_minutes},
-            )
-            time.sleep(args.interval_minutes * 60)
-            run_cycle(
-                token=token,
-                chat_id=chat_id,
-                qconf=qconf,
-                seen_ids=seen_ids,
-                max_per_source=args.max_per_source,
-                limit=args.limit,
-                min_score=args.min_score,
-                use_llm=use_llm,
-                ollama_endpoint=ollama_endpoint,
-                ollama_model=ollama_model,
-            )
-            cycles_run += 1
+    cycles_run = 0
+    while True:
+        run_cycle(
+            token=token,
+            chat_id=chat_id,
+            qconf=qconf,
+            seen_ids=seen_ids,
+            max_per_source=args.max_per_source,
+            limit=args.limit,
+            min_score=args.min_score,
+            use_llm=use_llm,
+            ollama_endpoint=ollama_endpoint,
+            ollama_model=ollama_model,
+        )
+        cycles_run += 1
+        if args.once:
+            LOGGER.info("Single-cycle mode complete", extra={"cycles": cycles_run})
+            break
+        LOGGER.info(
+            "Sleeping before next cycle",
+            extra={"minutes": args.interval_minutes},
+        )
+        time.sleep(max(args.interval_minutes, 1) * 60)
 
 
 if __name__ == "__main__":
