@@ -21,6 +21,11 @@ from sources.rss import fetch_rss
 
 LOGGER = logging.getLogger("eventscout")
 
+# Tracks how many consecutive selection attempts finished without a direct video.
+# This helps lower the score threshold more aggressively when the feed has been
+# dry for a while.
+NO_VIDEO_STREAK = 0
+
 
 @dataclass
 class Candidate:
@@ -136,19 +141,126 @@ def enrich_candidates(
     return enriched
 
 
+def _filter_candidates(
+    candidates: Iterable[Candidate], *, min_score: float
+) -> List[Candidate]:
+    filtered = [c for c in candidates if c.score >= min_score]
+    filtered.sort(key=lambda c: c.score, reverse=True)
+    return filtered
+
+
+def _inject_lower_ranked_video(
+    ranked: List[Candidate],
+    *,
+    limit: int,
+) -> tuple[List[Candidate], bool]:
+    if not ranked:
+        return ranked, False
+    for candidate in ranked[limit:]:
+        if candidate.videos:
+            updated = ranked[:limit]
+            if updated:
+                updated = updated[:-1] + [candidate]
+            else:
+                updated = [candidate]
+            updated.sort(key=lambda c: c.score, reverse=True)
+            return updated[:limit], True
+    return ranked[:limit], False
+
+
 def select_top_candidates(
     candidates: Iterable[Candidate],
     *,
     limit: int,
     min_score: float,
 ) -> List[Candidate]:
-    filtered = [c for c in candidates if c.score >= min_score]
+    global NO_VIDEO_STREAK
+
+    ranked = _filter_candidates(candidates, min_score=min_score)
     LOGGER.info(
         "Filtered candidates by score",
-        extra={"kept": len(filtered), "min_score": min_score},
+        extra={"kept": len(ranked), "min_score": min_score},
     )
-    filtered.sort(key=lambda c: c.score, reverse=True)
-    return filtered[:limit]
+
+    selected = ranked[:limit]
+    if any(c.videos for c in selected):
+        NO_VIDEO_STREAK = 0
+        return selected
+
+    injected, found_video = _inject_lower_ranked_video(ranked, limit=limit)
+    if found_video:
+        LOGGER.info(
+            "Promoted lower-ranked item to satisfy video requirement",
+            extra={"min_score": min_score},
+        )
+        NO_VIDEO_STREAK = 0
+        return injected
+
+    # No video even after checking beyond the limit. Start lowering the threshold.
+    NO_VIDEO_STREAK += 1
+    LOGGER.info(
+        "No video found among high-scoring candidates",
+        extra={"streak": NO_VIDEO_STREAK, "min_score": min_score},
+    )
+
+    reduction_step = 0.5
+    attempted_thresholds = {min_score}
+    best_selection = selected
+
+    max_steps = int(min_score / reduction_step) + 2
+    dynamic_attempts = min(NO_VIDEO_STREAK + 1, max_steps)
+
+    thresholds_to_try: List[float] = []
+    for attempt in range(1, max_steps + 1):
+        lowered = max(min_score - attempt * reduction_step, 0.0)
+        if lowered in attempted_thresholds:
+            continue
+        thresholds_to_try.append(lowered)
+        attempted_thresholds.add(lowered)
+        if attempt >= dynamic_attempts and lowered == 0.0:
+            break
+
+    for lowered_score in thresholds_to_try:
+        lowered_ranked = _filter_candidates(candidates, min_score=lowered_score)
+        if not lowered_ranked:
+            continue
+
+        lowered_selected = lowered_ranked[:limit]
+        if len(lowered_selected) > len(best_selection):
+            best_selection = lowered_selected
+
+        if any(c.videos for c in lowered_selected):
+            LOGGER.info(
+                "Lowered min score to include a video",
+                extra={
+                    "from": min_score,
+                    "to": lowered_score,
+                    "streak": NO_VIDEO_STREAK,
+                },
+            )
+            NO_VIDEO_STREAK = 0
+            return lowered_selected
+
+        injected, found_video = _inject_lower_ranked_video(
+            lowered_ranked, limit=limit
+        )
+        if found_video:
+            LOGGER.info(
+                "Lowered min score and promoted a video candidate",
+                extra={
+                    "from": min_score,
+                    "to": lowered_score,
+                    "streak": NO_VIDEO_STREAK,
+                },
+            )
+            NO_VIDEO_STREAK = 0
+            return injected
+
+    LOGGER.warning(
+        "Unable to locate any video candidates even after lowering threshold",
+        extra={"min_score": min_score, "streak": NO_VIDEO_STREAK},
+    )
+    return best_selection
 
 
 def format_digest(candidates: Sequence[Candidate]) -> str:
