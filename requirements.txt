@@ -5,5 +5,6 @@ beautifulsoup4==4.12.3
 lxml==5.3.0
 readability-lxml==0.8.1
 scikit-learn==1.5.1
+pytest==8.3.2
 
 # OpenRouter uses standard HTTP; no extra deps needed
