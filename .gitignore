@@ -1,5 +1,4 @@
 .env
 /.vscode
 /.venv
-/sources
 *.pyc

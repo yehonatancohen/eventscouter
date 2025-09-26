@@ -1,92 +1,142 @@
-import os, json, math, requests, re
-from .utils import norm_text
+"""Scoring heuristics for EventScout."""
+from __future__ import annotations
 
-KEYWORDS_CACHE = None
+import json
+import logging
+import os
+import re
+from typing import Dict
 
-def load_keywords(path="queries.json"):
+import requests
+
+LOGGER = logging.getLogger(__name__)
+KEYWORDS_CACHE: Dict[str, set[str]] | None = None
+
+
+def load_keywords(path: str = "queries.json") -> Dict[str, set[str]]:
     global KEYWORDS_CACHE
     if KEYWORDS_CACHE is None:
-        with open(path, "r", encoding="utf-8") as f:
-            q = json.load(f)
+        with open(path, "r", encoding="utf-8") as handle:
+            config = json.load(handle)
         KEYWORDS_CACHE = {
-            "he": set([s.lower() for s in q.get("keywords_he", [])]),
-            "en": set([s.lower() for s in q.get("keywords_en", [])]),
-            "cities": set([s.lower() for s in q.get("cities", [])])
+            "he": {s.lower() for s in config.get("keywords_he", [])},
+            "en": {s.lower() for s in config.get("keywords_en", [])},
+            "cities": {s.lower() for s in config.get("cities", [])},
         }
+        LOGGER.debug("Loaded keyword configuration", extra={"counts": {k: len(v) for k, v in KEYWORDS_CACHE.items()}})
     return KEYWORDS_CACHE
 
+
 def score_rule_based(title: str, text: str) -> float:
-    K = load_keywords()
-    t = f"{title} {text}".lower()
+    keywords = load_keywords()
+    combined = f"{title} {text}".lower()
     score = 0.0
-    # keyword hits
-    for kw in K["he"]:
-        if kw in t: score += 2.0
-    for kw in K["en"]:
-        if kw in t: score += 1.2
-    # city hits
-    for c in K["cities"]:
-        if c in t: score += 1.0
-    # freshness heuristic: prefer short posts and explicit dates
-    if re.search(r"\b(היום|הלילה|tonight|today|this week|השבוע)\b", t):
-        score += 1.5
-    # penalties
-    if len(text) < 120: score -= 0.5
+
+    hits_he = sum(1 for kw in keywords["he"] if kw in combined)
+    hits_en = sum(1 for kw in keywords["en"] if kw in combined)
+    hits_city = sum(1 for city in keywords["cities"] if city in combined)
+
+    if hits_he == 0 and hits_en == 0:
+        score -= 3.0
+    else:
+        score += hits_he * 2.0
+        score += hits_en * 1.4
+
+    score += hits_city * 1.0
+
+    if re.search(r"\b(today|tonight|this week|tomorrow|היום|הלילה|השבוע|מחר)\b", combined):
+        score += 1.8
+
+    if len(text) < 120:
+        score -= 0.8
+
+    if re.search(r"\b(pre\s?sale|tickets? on sale)\b", combined):
+        score += 0.8
+
+    if re.search(r"\b(news|politics|finance)\b", combined):
+        score -= 1.0
+
+    LOGGER.debug(
+        "Rule-based score computed",
+        extra={
+            "title": title[:80],
+            "score": score,
+            "hits_he": hits_he,
+            "hits_en": hits_en,
+            "hits_city": hits_city,
+        },
+    )
     return score
+
 
 def ollama_judge(title: str, text: str, ollama_endpoint: str, model: str) -> float:
     prompt = f"""
-Evaluate if this is a high‑value post for Israeli party/festival followers.
+Evaluate if this announcement is a high-value post for Israeli party/festival followers.
+Return a JSON object with: score (0-10) and reasons (short, English).
 Title: {title}
 Text: {text[:1200]}
-Return a single JSON with fields: score (0-10), reasons (short, Hebrew).
 """
     try:
-        r = requests.post(f"{ollama_endpoint}/api/generate", json={
-            "model": model,
-            "prompt": prompt,
-            "stream": False
-        }, timeout=25)
-        r.raise_for_status()
-        out = r.json().get("response", "")
-        import json as _json, re as _re
-        m = _re.search(r"\{.*\}", out, _re.S)
-        if m:
-            js = _json.loads(m.group(0))
-            return float(js.get("score", 0))
+        response = requests.post(
+            f"{ollama_endpoint}/api/generate",
+            json={"model": model, "prompt": prompt, "stream": False},
+            timeout=25,
+        )
+        response.raise_for_status()
+        payload = response.json().get("response", "")
+        import json as _json
+        import re as _re
+
+        match = _re.search(r"\{.*\}", payload, _re.S)
+        if match:
+            parsed = _json.loads(match.group(0))
+            return float(parsed.get("score", 0))
     except Exception:
+        LOGGER.exception("Ollama judge failed", extra={"model": model})
         return 0.0
     return 0.0
 
+
 def openrouter_judge(title: str, text: str) -> float:
     from .llm import openrouter_chat
+
     site_url = os.getenv("OPENROUTER_SITE_URL", "")
     app_title = os.getenv("OPENROUTER_APP_TITLE", "EventScout AI")
     prompt = f"""
-הערך בפורמט JSON בלבד. דרג את התאמת התוכן לפוסט ריפוסט למסיבות/פסטיבלים בישראל.
-החזר JSON עם: score (0-10), reasons (עברית קצרה), genre (מחרוזת), city (אם מזוהה).
+Return a valid JSON object. Evaluate how suitable this content is for a repost about parties or festivals in Israel.
+Return JSON with: score (0-10), reasons (concise English), genre (string), city (if detected).
 Title: {title}
 Text: {text[:1600]}
 """
-    msg = [{"role": "system", "content": "אתה שופט קפדן. החזר JSON תקין בלבד."},
-           {"role": "user", "content": prompt}]
+    message = [
+        {"role": "system", "content": "You are a strict judge. Return valid JSON only."},
+        {"role": "user", "content": prompt},
+    ]
     try:
-        out = openrouter_chat(msg, site_url=site_url, app_title=app_title)
+        output = openrouter_chat(message, site_url=site_url, app_title=app_title)
         import json as _json
-        js = _json.loads(out.strip())
-        s = float(js.get("score", 0))
-        # clamp
-        if s < 0: s = 0.0
-        if s > 10: s = 10.0
-        return s
+
+        parsed = _json.loads(output.strip())
+        score = float(parsed.get("score", 0))
+        if score < 0:
+            score = 0.0
+        if score > 10:
+            score = 10.0
+        return score
     except Exception:
+        LOGGER.exception("OpenRouter judge failed")
         return 0.0
 
 
 def final_score(title: str, text: str, use_llm: bool, ollama_endpoint: str, model: str) -> float:
-    rb = score_rule_based(title, text)
+    rule_based = score_rule_based(title, text)
     if use_llm:
-        llm = ollama_judge(title, text, ollama_endpoint, model)
-        # blend
-        return 0.6*rb + 0.4*(llm)
-    return rb
+        llm_score = ollama_judge(title, text, ollama_endpoint, model)
+        final = 0.6 * rule_based + 0.4 * llm_score
+        LOGGER.debug(
+            "Combined score",
+            extra={"rule_based": rule_based, "llm": llm_score, "final": final},
+        )
+        return final
+    LOGGER.debug("Rule-based only score", extra={"score": rule_based})
+    return rule_based
