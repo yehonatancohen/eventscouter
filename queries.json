@@ -13,7 +13,12 @@
     "סטודנטים",
     "After",
     "ליין-אפ",
-    "הופעה"
+    "הופעה",
+    "תיעוד",
+    "מצחיק",
+    "ויראלי",
+    "סלב",
+    "גאלה"
   ],
   "keywords_en": [
     "festival",
@@ -24,7 +29,11 @@
     "EDM",
     "lineup",
     "DJ set",
-    "after party"
+    "after party",
+    "party video",
+    "viral clip",
+    "celebrity party",
+    "nightlife footage"
   ],
   "cities": [
     "תל אביב",
@@ -33,25 +42,42 @@
     "באר שבע",
     "נתניה",
     "אילת",
+    "אשדוד",
+    "אשקלון",
+    "חדרה",
     "TLV",
-    "Tel Aviv"
+    "Tel Aviv",
+    "Haifa",
+    "Jerusalem"
   ],
   "google_news_queries": [
     "פסטיבל site:il",
     "מסיבה תל אביב",
+    "מסיבת ענק ישראל",
     "EDM Israel",
     "טכנו ישראל",
     "Hip hop Israel club",
-    "festival Israel"
+    "festival Israel",
+    "israeli celebrity party"
+  ],
+  "social_video_queries": [
+    "site:tiktok.com מסיבה ישראל",
+    "site:tiktok.com פסטיבל ישראל",
+    "site:instagram.com מסיבת סלבים",
+    "site:facebook.com וידאו מסיבה ישראל",
+    "party video israel",
+    "viral festival israel"
   ],
   "rss_feeds": [
     "https://news.google.com/rss/search?q=%D7%A4%D7%A1%D7%98%D7%99%D7%91%D7%9C%20when:7d&hl=iw&gl=IL&ceid=IL:iw",
-    "https://news.google.com/rss/search?q=festival%20Israel%20when:7d&hl=en-IL&gl=IL&ceid=IL:en"
+    "https://news.google.com/rss/search?q=festival%20Israel%20when:7d&hl=en-IL&gl=IL&ceid=IL:en",
+    "https://news.google.com/rss/search?q=%D7%95%D7%99%D7%93%D7%90%D7%95%20%D7%9E%D7%A1%D7%99%D7%91%D7%94%20%D7%99%D7%A9%D7%A8%D7%90%D7%9C&hl=iw&gl=IL&ceid=IL:iw"
   ],
   "subreddits": [
     "edm",
     "festivals",
     "electronicmusic",
-    "hiphopheads"
+    "hiphopheads",
+    "Israel"
   ]
 }
