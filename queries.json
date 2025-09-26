@@ -1,0 +1,57 @@
+{
+  "keywords_he": [
+    "פסטיבל",
+    "מסיבה",
+    "מסיבת נוער",
+    "טכנו",
+    "היפ הופ",
+    "EDM",
+    "רחבה",
+    "ליין",
+    "מועדון",
+    "די ג׳יי",
+    "סטודנטים",
+    "After",
+    "ליין-אפ",
+    "הופעה"
+  ],
+  "keywords_en": [
+    "festival",
+    "rave",
+    "club night",
+    "techno",
+    "hip hop",
+    "EDM",
+    "lineup",
+    "DJ set",
+    "after party"
+  ],
+  "cities": [
+    "תל אביב",
+    "ירושלים",
+    "חיפה",
+    "באר שבע",
+    "נתניה",
+    "אילת",
+    "TLV",
+    "Tel Aviv"
+  ],
+  "google_news_queries": [
+    "פסטיבל site:il",
+    "מסיבה תל אביב",
+    "EDM Israel",
+    "טכנו ישראל",
+    "Hip hop Israel club",
+    "festival Israel"
+  ],
+  "rss_feeds": [
+    "https://news.google.com/rss/search?q=%D7%A4%D7%A1%D7%98%D7%99%D7%91%D7%9C%20when:7d&hl=iw&gl=IL&ceid=IL:iw",
+    "https://news.google.com/rss/search?q=festival%20Israel%20when:7d&hl=en-IL&gl=IL&ceid=IL:en"
+  ],
+  "subreddits": [
+    "edm",
+    "festivals",
+    "electronicmusic",
+    "hiphopheads"
+  ]
+}
