@@ -4,6 +4,41 @@ from __future__ import annotations
 import logging
 from typing import List
 
+SCOOP_KEYWORDS = {
+    "breaking",
+    "scoop",
+    "headline",
+    "leak",
+    "leaked",
+    "leaks",
+    "announce",
+    "announcement",
+    "announced",
+    "exclusive",
+    "reveals",
+    "revealed",
+    "new track",
+    "new single",
+    "new album",
+    "tour dates",
+    "lineup",
+}
+
+VIDEO_HINTS = {"hosted:video", "rich:video", "video"}
+VIDEO_DOMAINS = {
+    "youtube.com",
+    "youtu.be",
+    "tiktok.com",
+    "instagram.com",
+    "facebook.com",
+    "fb.watch",
+    "streamable.com",
+    "v.redd.it",
+    "reddit.com",
+    "twitter.com",
+    "x.com",
+}
+
 import requests
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,6 +74,12 @@ def fetch_subreddit(subreddit: str, *, limit: int = 10, t: str = "day") -> List[
         if score < 20 and num_comments < 3:
             # Filter low-signal posts to reduce noise.
             continue
+        if not (_looks_like_video(payload, link) or _looks_like_scoop(title)):
+            _LOGGER.debug(
+                "Skipping subreddit post without scoop/video cues",
+                extra={"title": title[:80], "link": link},
+            )
+            continue
         items.append({
             "title": title,
             "link": link,
@@ -46,6 +87,28 @@ def fetch_subreddit(subreddit: str, *, limit: int = 10, t: str = "day") -> List[
         })
     _LOGGER.info("Fetched %s subreddit items", len(items), extra={"subreddit": subreddit})
     return items
+
+
+def _looks_like_video(payload: dict, link: str) -> bool:
+    link_lower = link.lower()
+    post_hint = (payload.get("post_hint") or "").lower()
+    domain = (payload.get("domain") or "").lower()
+
+    if payload.get("is_video") or payload.get("media"):
+        return True
+    if post_hint in VIDEO_HINTS:
+        return True
+    if link_lower.endswith((".mp4", ".webm", ".mov")):
+        return True
+    for candidate in VIDEO_DOMAINS:
+        if candidate in link_lower or candidate in domain:
+            return True
+    return False
+
+
+def _looks_like_scoop(title: str) -> bool:
+    normalized = title.lower()
+    return any(token in normalized for token in SCOOP_KEYWORDS)
 
 
 __all__ = ["fetch_subreddit"]
