@@ -13,6 +13,8 @@ import requests
 from dotenv import load_dotenv
 
 from core.rank import final_score, load_keywords
+from core.extract import extract_text_and_videos
+from core.rank import final_score
 from core.utils import hash_id, load_seen, norm_text, save_seen
 from sources.google_news import fetch_search
 from sources.reddit import fetch_subreddit

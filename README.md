@@ -34,7 +34,7 @@ Edit `queries.json`:
 
 ## Run the bot
 ```bash
-python bot.py --limit 6
+python bot.py --limit 6 --min-score 4 --interval-minutes 0
 ```
 By default the bot loops forever, waking up every 15 minutes. Use `--interval-minutes` to change the cadence or `--once` to run a single cycle. The Telegram message now includes a curated digest plus a "Suggested social upload" block with a highlighted clip and two catchy headline ideas.
 The default minimum score is 5.5—raise or lower it via `--min-score` depending on how picky you want the feed to be.
