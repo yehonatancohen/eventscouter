@@ -13,7 +13,16 @@
     "סטודנטים",
     "After",
     "ליין-אפ",
-    "הופעה"
+    "הופעה",
+    "ליין-אפ",
+    "הפקה",
+    "אירוע",
+    "סט",
+    "ליינאפ",
+    "טראק",
+    "במה",
+    "וויב",
+    "חגיגה"
   ],
   "keywords_en": [
     "festival",
@@ -24,7 +33,45 @@
     "EDM",
     "lineup",
     "DJ set",
-    "after party"
+    "after party",
+    "headline set",
+    "stage takeover",
+    "live act",
+    "party",
+    "banger",
+    "viral"
+  ],
+  "artist_keywords": [
+    "אדם טן",
+    "מיטה גאמי",
+    "מיטגאמי",
+    "קלאב דה קומבט",
+    "club de combat",
+    "adam ten",
+    "mita gami",
+    "solomun",
+    "solomon",
+    "black coffee",
+    "keinemusik",
+    "eden pines",
+    "אושר כהן",
+    "עידן בקשי",
+    "mako",
+    "celebs"
+  ],
+  "viral_cues": [
+    "קליפ",
+    "ויראלי",
+    "סרטון",
+    "הדלפה",
+    "כותרות",
+    "מכות",
+    "דרמה",
+    "טרנד",
+    "trend",
+    "viral",
+    "headline",
+    "must watch"
   ],
   "cities": [
     "תל אביב",
@@ -34,7 +81,12 @@
     "נתניה",
     "אילת",
     "TLV",
-    "Tel Aviv"
+    "Tel Aviv",
+    "קיסריה",
+    "הר החרמון",
+    "ים המלח",
+    "צפון",
+    "דרום"
   ],
   "google_news_queries": [
     "פסטיבל site:il",
@@ -42,7 +94,14 @@
     "EDM Israel",
     "טכנו ישראל",
     "Hip hop Israel club",
-    "festival Israel"
+    "festival Israel",
+    "אדם טן הופעה",
+    "מיטה גאמי סט",
+    "קיינמוזיק ישראל",
+    "אושר כהן הופעה",
+    "טרה פסטיבל",
+    "Solomun Israel",
+    "Black Coffee Tel Aviv"
   ],
   "rss_feeds": [
     "https://news.google.com/rss/search?q=%D7%A4%D7%A1%D7%98%D7%99%D7%91%D7%9C%20when:7d&hl=iw&gl=IL&ceid=IL:iw",
