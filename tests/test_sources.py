@@ -1,7 +1,7 @@
 import datetime as dt
 
 from sources.google_news import _extract_direct_link
-from sources.reddit import _looks_like_scoop, _looks_like_video
+from sources.reddit import _looks_eventful, _looks_like_scoop, _looks_like_video
 from sources.tiktok import _normalize_video, _parse_timestamp, fetch_hashtag
 
 
@@ -25,6 +25,10 @@ def test_reddit_video_detection_by_domain():
 
 def test_reddit_scoop_detection_keywords():
     assert _looks_like_scoop("Breaking: New lineup announced for Tel Aviv")
+
+
+def test_reddit_eventful_detection_keywords():
+    assert _looks_eventful("Huge techno festival takes over Tel Aviv coastline")
 
 
 def test_tiktok_parse_timestamp_handles_string():

@@ -17,11 +17,63 @@ SCOOP_KEYWORDS = {
     "exclusive",
     "reveals",
     "revealed",
-    "new track",
-    "new single",
-    "new album",
     "tour dates",
     "lineup",
+    "set times",
+    "tickets",
+    "ticket",
+    "afterparty",
+    "festival",
+    "concert",
+    "party",
+    "show",
+    "performance",
+}
+
+EVENT_KEYWORDS = {
+    "festival",
+    "fest",
+    "concert",
+    "concerts",
+    "show",
+    "shows",
+    "gig",
+    "gigs",
+    "tour",
+    "tour dates",
+    "party",
+    "parties",
+    "event",
+    "events",
+    "lineup",
+    "set times",
+    "dj",
+    "dj set",
+    "set",
+    "club",
+    "nightlife",
+    "rave",
+    "live",
+    "performance",
+    "headline",
+    "afterparty",
+    "מסיבה",
+    "מסיבות",
+    "פסטיבל",
+    "פסטיבלים",
+    "הופעה",
+    "הופעות",
+    "אירוע",
+    "אירועים",
+    "ליין",
+    "ליינאפ",
+    "סט",
+    "טכנו",
+    "די ג'יי",
+    "דיג'יי",
+    "חיי לילה",
+    "בידור",
+    "מופע",
 }
 
 VIDEO_HINTS = {"hosted:video", "rich:video", "video"}
@@ -74,9 +126,11 @@ def fetch_subreddit(subreddit: str, *, limit: int = 10, t: str = "day") -> List[
         if score < 20 and num_comments < 3:
             # Filter low-signal posts to reduce noise.
             continue
-        if not (_looks_like_video(payload, link) or _looks_like_scoop(title)):
+        is_video = _looks_like_video(payload, link)
+        is_eventful = _looks_eventful(title)
+        if not (is_video or is_eventful or _looks_like_scoop(title)):
             _LOGGER.debug(
-                "Skipping subreddit post without scoop/video cues",
+                "Skipping subreddit post without event/video cues",
                 extra={"title": title[:80], "link": link},
             )
             continue
@@ -111,4 +165,9 @@ def _looks_like_scoop(title: str) -> bool:
     return any(token in normalized for token in SCOOP_KEYWORDS)
 
 
-__all__ = ["fetch_subreddit"]
+def _looks_eventful(title: str) -> bool:
+    normalized = title.lower()
+    return any(token in normalized for token in EVENT_KEYWORDS)
+
+
+__all__ = ["fetch_subreddit", "_looks_eventful"]

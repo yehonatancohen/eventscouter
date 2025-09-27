@@ -5,6 +5,9 @@
     "מסיבת נוער",
     "טכנו",
     "היפ הופ",
+    "פופ",
+    "רוק",
+    "ג'אז",
     "EDM",
     "רחבה",
     "ליין",
@@ -22,7 +25,9 @@
     "טראק",
     "במה",
     "וויב",
-    "חגיגה"
+    "חגיגה",
+    "מופע",
+    "בידור"
   ],
   "keywords_en": [
     "festival",
@@ -30,6 +35,9 @@
     "club night",
     "techno",
     "hip hop",
+    "pop",
+    "rock",
+    "jazz",
     "EDM",
     "lineup",
     "DJ set",
@@ -39,7 +47,9 @@
     "live act",
     "party",
     "banger",
-    "viral"
+    "viral",
+    "concert",
+    "live show"
   ],
   "artist_keywords": [
     "אדם טן",
@@ -57,7 +67,9 @@
     "אושר כהן",
     "עידן בקשי",
     "mako",
-    "celebs"
+    "celebs",
+    "ישראל בידור",
+    "israel bidur"
   ],
   "viral_cues": [
     "קליפ",
@@ -71,7 +83,11 @@
     "trend",
     "viral",
     "headline",
-    "must watch"
+    "must watch",
+    "רכילות",
+    "celeb",
+    "celebs",
+    "bidur"
   ],
   "cities": [
     "תל אביב",
@@ -119,6 +135,14 @@
     "EDMIsrael",
     "TelAvivClub",
     "IsraelRave",
-    "HaifaParty"
+    "HaifaParty",
+    "MakoCelebs",
+    "mako celebs",
+    "ישראל בידור",
+    "israel bidur",
+    "ישראלבידור",
+    "מסיבות בישראל",
+    "חיי לילה",
+    "live concert israel"
   ]
 }
