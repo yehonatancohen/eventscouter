@@ -18,6 +18,7 @@ from core.utils import hash_id, load_seen, norm_text, save_seen
 from sources.google_news import fetch_search
 from sources.reddit import fetch_subreddit
 from sources.rss import fetch_rss
+from sources.tiktok import fetch_hashtag
 
 LOGGER = logging.getLogger("eventscout")
 
@@ -95,6 +96,20 @@ def collect_candidates(qconf: Dict, *, max_per_source: int = 10) -> List[dict]:
                     seen_links.add(result["link"])
         except Exception:
             LOGGER.exception("Failed to fetch subreddit", extra={"subreddit": subreddit})
+
+    for hashtag in qconf.get("tiktok_hashtags", []):
+        try:
+            results = fetch_hashtag(hashtag, limit=max_per_source, days=7)
+            LOGGER.debug(
+                "TikTok results",
+                extra={"hashtag": hashtag, "count": len(results)},
+            )
+            for result in results:
+                if result["link"] not in seen_links:
+                    items.append(result)
+                    seen_links.add(result["link"])
+        except Exception:
+            LOGGER.exception("Failed to fetch TikTok hashtag", extra={"hashtag": hashtag})
 
     LOGGER.info("Collected %s unique raw candidates", len(items))
     return items

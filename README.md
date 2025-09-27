@@ -1,11 +1,12 @@
 # EventScout AI — No YouTube API Needed
 
-EventScout monitors free data sources (Google News RSS, curated RSS feeds, Reddit JSON) → extracts article text and videos → ranks candidates with heuristics or an optional LLM → sends the best leads to Telegram.
+EventScout monitors free data sources (Google News RSS, curated RSS feeds, Reddit JSON, TikTok search via TikWM) → extracts article text and videos → ranks candidates with heuristics or an optional LLM → sends the best leads to Telegram.
 
 ## Why it is free
 - No YouTube API.
 - Google News RSS and open RSS feeds.
 - Public Reddit JSON (mind the rate limits).
+- TikTok search via the free [TikWM](https://www.tikwm.com/) API.
 - Optional: local LLM via [Ollama](https://ollama.com).
 
 ## Installation
@@ -29,6 +30,7 @@ Edit `queries.json`:
 - `google_news_queries`: search strings (the tool builds RSS URLs automatically).
 - `rss_feeds`: direct feeds for event or production sites.
 - `subreddits`: EDM/festival sources.
+- `tiktok_hashtags`: hashtags or keywords to look up on TikTok (7-day window, sorted by engagement).
 - `keywords_*` + `cities`: keywords for scoring.
 
 ## Run the bot
